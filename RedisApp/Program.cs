@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +12,8 @@ namespace RedisApp
     {
         public static void Main(string[] args)
         {
+            LaunchRedisServer();
+
             CreateHostBuilder(args).Build().Run();
         }
 
@@ -22,5 +23,24 @@ namespace RedisApp
                 {
                     webBuilder.UseStartup<Startup>();
                 });
+
+        private static void LaunchRedisServer()
+        {
+            ProcessStartInfo proc = new ProcessStartInfo();
+
+            proc.UseShellExecute = true;
+            proc.WorkingDirectory = Environment.CurrentDirectory + "\\Redis64";
+            proc.FileName = "redis-server.exe";
+
+            try
+            {
+                Process.Start(proc);
+            }
+            catch (Exception ex)
+            {
+                //log error
+                var a = 2;
+            }
+        }
     }
 }
