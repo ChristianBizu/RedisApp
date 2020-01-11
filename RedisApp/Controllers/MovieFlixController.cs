@@ -37,7 +37,7 @@ namespace RedisApp.Controllers
                 client.AddItemToSortedSet("top100", "17", 17);
                 client.AddItemToSortedSet("top100", "27", 27);
                 client.AddItemToSortedSet("top100", "54", 54);
-
+                //pepe
                 client.AddItemToSortedSet("top100", "56", 56);
                 client.AddItemToSortedSet("top100", "55", 55);
                 client.AddItemToSortedSet("top100", "60", 60);
