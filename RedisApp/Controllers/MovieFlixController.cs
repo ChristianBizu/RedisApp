@@ -12,49 +12,43 @@ namespace RedisApp.Controllers
     [ApiController]
     [Route("[controller]")]
     public class MovieFlixController : ControllerBase
-    {
+    { 
+        private const string REDIS_SERVER_CONNECTION = "localhost:6379";
+        private const string TOP_PELIS_SORTEDSET = "TOP10";
+
         [HttpGet]
         public string Get()
         {
-            var manager = new RedisManagerPool("localhost:6379");
+            var manager = new RedisManagerPool(REDIS_SERVER_CONNECTION);
+
             using (var client = manager.GetClient())
             {
-                string[] lis = { "Pepe", "Mera", "JimmyPuta" };
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "3", 3);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "1", 1);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "7", 7);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "5", 5);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "11", 11);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "0", 0);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "17", 17);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "27", 27);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "54", 54);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "56", 56);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "55", 55);
+                client.AddItemToSortedSet(TOP_PELIS_SORTEDSET, "60", 60);
 
-                client.Set("foo", lis);
+                var listado = client.GetAllItemsFromSortedSet(TOP_PELIS_SORTEDSET);
 
-                var res = client.Get<string[]>("foo");
-
-                client.AddItemToSortedSet("top100", "3", 3);
-                client.AddItemToSortedSet("top100", "1", 1);
-                client.AddItemToSortedSet("top100", "7", 7);
-
-                client.AddItemToSortedSet("top100", "5", 5);
-
-
-                client.AddItemToSortedSet("top100", "11", 11);
-                client.AddItemToSortedSet("top100", "0", 0);
-                client.AddItemToSortedSet("top100", "17", 17);
-                client.AddItemToSortedSet("top100", "27", 27);
-                client.AddItemToSortedSet("top100", "54", 54);
-
-                client.AddItemToSortedSet("top100", "56", 56);
-                client.AddItemToSortedSet("top100", "55", 55);
-                client.AddItemToSortedSet("top100", "60", 60);
-
-                var listado = client.GetAllItemsFromSortedSet("top100");
-
-                return "vuestra madre";
+                return "Filled";
             }
         }
 
         [HttpGet("GetTopPelis")]
         public string GetTopPelis()
         {
-            var manager = new RedisManagerPool("localhost:6379");
+            var manager = new RedisManagerPool(REDIS_SERVER_CONNECTION);
             using (var client = manager.GetClient())
             {
-                var listado = client.GetRangeWithScoresFromSortedSetDesc("top100", 0, 9);
+                var listado = client.GetRangeWithScoresFromSortedSetDesc(TOP_PELIS_SORTEDSET, 0, 9);
                 var primer_listado = String.Join('\n', listado);
 
                 return primer_listado;
@@ -67,10 +61,10 @@ namespace RedisApp.Controllers
         {
             if (string.IsNullOrEmpty(movieId)) return;
 
-            var manager = new RedisManagerPool("localhost:6379");
+            var manager = new RedisManagerPool(REDIS_SERVER_CONNECTION);
             using (var client = manager.GetClient())
             {
-                var listado = client.IncrementItemInSortedSet("top100", movieId, 1);
+                var listado = client.IncrementItemInSortedSet(TOP_PELIS_SORTEDSET, movieId, 1);
             }
         }
     }
