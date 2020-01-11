@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RedisApp", "RedisApp\RedisApp.csproj", "{18F8336A-14C8-4873-AAA5-3E2F0F72F6D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserActionSimulator", "UserActionSimulator\UserActionSimulator.csproj", "{6FAA9799-C216-4A5A-8AC6-A5A1FC6D9130}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UserActionSimulator", "UserActionSimulator\UserActionSimulator.csproj", "{6FAA9799-C216-4A5A-8AC6-A5A1FC6D9130}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B3DEBFAB-0F16-4410-A543-12BFE9AB9CAA}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
