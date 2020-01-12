@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace RedisApp
 {
@@ -31,16 +28,9 @@ namespace RedisApp
             proc.UseShellExecute = true;
             proc.WorkingDirectory = Environment.CurrentDirectory + "\\Redis64";
             proc.FileName = "redis-server.exe";
+            proc.Arguments = "redis.windows.conf";
 
-            try
-            {
-                Process.Start(proc);
-            }
-            catch (Exception ex)
-            {
-                //log error
-                var a = 2;
-            }
+            Process.Start(proc);
         }
     }
 }
