@@ -28,7 +28,46 @@ namespace MovieFlix.Application.Services
 
         public void SaveViewsDb(MovieVisualization view)
         {
+            /*
+                HOLA JAMIE DEL FUTURO. 
 
+                --------- ESTA FUNCION ME LA HABIA AÑADIDO EN UN DATA EN MovieFlix.API.
+                            
+                public const string USP_LP = "USP_LISTA_PELICULAS";
+
+                //USP PARA DEVUELVER UNA LISTA CON TODOS LOS AEROPUERTOS.
+                public string DevuelveListaPeliculas() 
+                {            
+                    DataTable dt = new DataTable();
+                    using (SqlConnection sqlConn = new SqlConnection(Startup.SqlConnectionString))
+                    {
+                        using SqlCommand sqlCmd = new SqlCommand(USP_LP, sqlConn);
+                        sqlCmd.CommandType = CommandType.StoredProcedure;
+                        sqlConn.Open();
+                        using SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd);
+                        sqlAdapter.Fill(dt);
+                    }
+
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        string p = row["title"].ToString();
+                    }
+
+                    return null;
+                }
+
+                --------- ESTO LO DECLARABA EN EL CONTROLLER Y LO LLAMABA EN EL GET.
+
+                public readonly PeliculasDbContext _peliculasContext;
+
+                public MovieFlixController () {
+                    _peliculasContext = new PeliculasDbContext();
+                }
+
+
+
+                _peliculasContext.DevuelveListaPeliculas();
+            */
         }
 
         public Dictionary<string, int> UpdateCustomUserRecommendations(string userId)
