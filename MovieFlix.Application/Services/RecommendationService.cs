@@ -28,7 +28,7 @@ namespace MovieFlix.Application.Services
 
         public void SaveViewsDb(MovieVisualization view)
         {
-            //insertamos la visita en SQL
+
         }
 
         public Dictionary<string, int> UpdateCustomUserRecommendations(string userId)
