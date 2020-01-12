@@ -1,6 +1,8 @@
 ﻿using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 
 namespace MovieFlix.Application.Services
@@ -11,6 +13,7 @@ namespace MovieFlix.Application.Services
         private const string TOP_PELIS_SORTEDSET = "TOP10";
         private const int CUSTOM_USER_RECOMMENDATIONS_LIMIT = 20;
         private const string USERS_RECOMMENDATIONS_HASH = "USERS_RECOMMENDATIONS";
+        public const string USP_LP = "USP_LISTA_PELICULAS";
         private readonly RedisManagerPool Manager = new RedisManagerPool(REDIS_SERVER_CONNECTION);
 
         public void UpdateRecommendations(MovieVisualization movieVisualization)
@@ -27,48 +30,27 @@ namespace MovieFlix.Application.Services
             UpdateCustomUserRecommendations(movieVisualization.UserId);
         }
 
-        public void SaveViewsDb(MovieVisualization view)
+        public void SaveViewsDb()
         {
-            /*
-                HOLA JAMIE DEL FUTURO. 
-
-                --------- ESTA FUNCION ME LA HABIA AÑADIDO EN UN DATA EN MovieFlix.API.
-                            
-                public const string USP_LP = "USP_LISTA_PELICULAS";
-
-                //USP PARA DEVUELVER UNA LISTA CON TODOS LOS AEROPUERTOS.
-                public string DevuelveListaPeliculas() 
-                {            
-                    DataTable dt = new DataTable();
-                    using (SqlConnection sqlConn = new SqlConnection(Startup.SqlConnectionString))
+            DataTable dt = new DataTable();
+            using (SqlConnection sqlConn = new SqlConnection("Server = CD - TOSH - 020419; Database = MovieFlix; Trusted_Connection = True; MultipleActiveResultSets = true"))
+            {
+                using (SqlCommand sqlCmd = new SqlCommand(USP_LP, sqlConn))
+                {
+                    sqlCmd.CommandType = CommandType.StoredProcedure;
+                    sqlConn.Open();
+                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                     {
-                        using SqlCommand sqlCmd = new SqlCommand(USP_LP, sqlConn);
-                        sqlCmd.CommandType = CommandType.StoredProcedure;
-                        sqlConn.Open();
-                        using SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd);
                         sqlAdapter.Fill(dt);
                     }
-
-                    foreach (DataRow row in dt.Rows)
-                    {
-                        string p = row["title"].ToString();
-                    }
-
-                    return null;
                 }
+            }
 
-                --------- ESTO LO DECLARABA EN EL CONTROLLER Y LO LLAMABA EN EL GET.
-
-                public readonly PeliculasDbContext _peliculasContext;
-
-                public MovieFlixController () {
-                    _peliculasContext = new PeliculasDbContext();
-                }
-
-
-
-                _peliculasContext.DevuelveListaPeliculas();
-            */
+            List<string> listaP = new List<string>();
+            foreach (DataRow row in dt.Rows)
+            {
+                listaP.Add(row["title"].ToString());
+            }
         }
 
         public void UpdateCustomUserRecommendations(string userId)

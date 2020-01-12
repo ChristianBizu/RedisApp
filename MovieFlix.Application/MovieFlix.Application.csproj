@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="ServiceStack.Redis" Version="5.7.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
   </ItemGroup>
 
 </Project>
