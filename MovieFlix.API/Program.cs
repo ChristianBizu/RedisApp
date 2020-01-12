@@ -3,7 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace RedisApp
+namespace MovieFlix
 {
     public class Program
     {
@@ -26,9 +26,11 @@ namespace RedisApp
             ProcessStartInfo proc = new ProcessStartInfo();
 
             proc.UseShellExecute = true;
-            proc.WorkingDirectory = Environment.CurrentDirectory + "\\Redis64";
+            proc.WorkingDirectory = Environment.CurrentDirectory + "\\Lib\\Redis64";
             proc.FileName = "redis-server.exe";
             proc.Arguments = "redis.windows.conf";
+            //proc.CreateNoWindow = true;
+            //proc.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
 
             Process.Start(proc);
         }

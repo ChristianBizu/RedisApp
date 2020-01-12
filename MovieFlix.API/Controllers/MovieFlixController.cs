@@ -2,10 +2,10 @@
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using ServiceStack.Redis;
-using System.Text.Json;
 using System.Collections.Generic;
+using MovieFlix.Application;
 
-namespace RedisApp.Controllers
+namespace MovieFlix.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -52,45 +52,33 @@ namespace RedisApp.Controllers
             }
         }
 
-        [HttpPost("ViewMovie")]
-        public void ViewMovie([FromBody] string movieId)
+        [HttpPost("WatchMovie")]
+        public void WatchMovie([FromBody] MovieVisualization movieVisualization)
         {
-            if (string.IsNullOrEmpty(movieId)) return;
-
-            using (var client = Manager.GetClient())
-            {
-                var listado = client.IncrementItemInSortedSet(TOP_PELIS_SORTEDSET, movieId, 1);
-            }
-        }
-
-        [HttpPost("FullViewMovie")]
-        public void FullViewMovie([FromBody] string visitJson)
-        {
-            ViewModel visit = JsonSerializer.Deserialize<ViewModel>(visitJson);
-            DoVisit(visit);
+            UpdateRecommendations(movieVisualization);
         }
 
         #region Private Methods
-        private void DoVisit(ViewModel visit)
+        private void UpdateRecommendations(MovieVisualization movieVisualization)
         {
             using (var client = Manager.GetClient())
             {
                 //Incremento en TOP Pelis
-                client.IncrementItemInSortedSet(TOP_PELIS_SORTEDSET, visit.MovieName, 1);
+                client.IncrementItemInSortedSet(TOP_PELIS_SORTEDSET, movieVisualization.MovieName, 1);
 
                 //Incremento en TOP Pelis por su género
-                client.IncrementItemInSortedSet(visit.GenreName, visit.MovieName, 1);
+                client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
             }
-            
-            CalculateRecomendations(visit);            
+
+            UpdateCustomUserRecommendations(movieVisualization.UserId);
         }
 
-        private void SaveViewsDb(ViewModel view)
+        private void SaveViewsDb(MovieVisualization view)
         {
             //insertamos la visita en SQL
         }
 
-        private Dictionary<string, int> CalculateRecomendations(ViewModel view) 
+        private Dictionary<string, int> UpdateCustomUserRecommendations(string userId) 
         {
             Dictionary<string, int> genreViews = new Dictionary<string, int>() { { "Action", 247 }, { "Love", 60 }, { "Comedy", 10 }, }; // get genre views from bd
 
@@ -121,21 +109,5 @@ namespace RedisApp.Controllers
             return genreScores;
         }
         #endregion
-    }
-    public class MovieModel 
-    {
-        
-
-        
-    }
-
-    public class ViewModel
-    {
-        public string MovieName { get; set; }
-        public string UserName { get; set; }
-        public string GenreName { get; set; }
-        public int MovieId { get; set; }
-        public int UserId { get; set; }
-        public int GenreId { get; set; }
     }
 }
