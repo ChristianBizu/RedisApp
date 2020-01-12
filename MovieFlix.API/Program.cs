@@ -31,6 +31,7 @@ namespace MovieFlix
             proc.Arguments = "redis.windows.conf";
             //proc.CreateNoWindow = true;
             //proc.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+            //proc.Verb = "runas";
 
             Process.Start(proc);
         }
