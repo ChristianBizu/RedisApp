@@ -1,4 +1,5 @@
-﻿using ServiceStack.Redis;
+﻿using Microsoft.Extensions.Configuration;
+using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -9,6 +10,12 @@ namespace MovieFlix.Application.Services
 {
     public class RecommendationService
     {
+        private IConfiguration _configuration;
+        public RecommendationService(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         private const string REDIS_SERVER_CONNECTION = "localhost:6379";
         private const string TOP_PELIS_SORTEDSET = "TOP10";
         private const int CUSTOM_USER_RECOMMENDATIONS_LIMIT = 20;
@@ -27,29 +34,33 @@ namespace MovieFlix.Application.Services
                 client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
             }
 
+            SaveViewsDb(movieVisualization);
+
             UpdateCustomUserRecommendations(movieVisualization.UserId);
         }
 
-        public void SaveViewsDb()
+        public void SaveViewsDb(MovieVisualization movieVisualization)
         {
-            DataTable dt = new DataTable();
-            using (SqlConnection sqlConn = new SqlConnection("Server = CD - TOSH - 020419; Database = MovieFlix; Trusted_Connection = True; MultipleActiveResultSets = true"))
-            {
-                using (SqlCommand sqlCmd = new SqlCommand(USP_LP, sqlConn))
-                {
-                    sqlCmd.CommandType = CommandType.StoredProcedure;
-                    sqlConn.Open();
-                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
-                    {
-                        sqlAdapter.Fill(dt);
-                    }
-                }
-            }
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            List<string> listaP = new List<string>();
-            foreach (DataRow row in dt.Rows)
+            using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                listaP.Add(row["title"].ToString());
+                string insertQuery = "INSERT INTO [MovieFlix].[dbo].[views] values ( @UserID , @MovieID , @Date )";
+
+                using (SqlCommand sqlCmd = new SqlCommand(insertQuery, sqlConn))
+                {
+                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24);
+                    sqlCmd.Parameters.Add("@MovieID", SqlDbType.Int);
+                    sqlCmd.Parameters.Add("@Date", SqlDbType.DateTime);
+
+                    sqlCmd.CommandType = CommandType.Text;
+                    sqlConn.Open();
+
+                    var response = sqlCmd.ExecuteNonQuery();
+
+                    if (response > 0)
+                        return;
+                }
             }
         }
 

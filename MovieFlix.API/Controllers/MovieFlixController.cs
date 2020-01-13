@@ -4,6 +4,7 @@ using ServiceStack.Redis;
 using MovieFlix.Application;
 using MovieFlix.Application.Services;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 
 namespace MovieFlix.Controllers
 {
@@ -19,9 +20,9 @@ namespace MovieFlix.Controllers
 
         private readonly RedisManagerPool Manager = new RedisManagerPool(REDIS_SERVER_CONNECTION);
 
-        public MovieFlixController()
+        public MovieFlixController(IConfiguration config)
         {
-            recommendationService = new RecommendationService();
+            recommendationService = new RecommendationService(config);
         }
 
         [HttpGet]
