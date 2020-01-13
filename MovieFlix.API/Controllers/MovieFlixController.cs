@@ -12,13 +12,7 @@ namespace MovieFlix.Controllers
     [Route("[controller]")]
     public class MovieFlixController : ControllerBase
     {
-        private RecommendationService recommendationService;
-
-        private const string REDIS_SERVER_CONNECTION = "localhost:6379";
-        private const string TOP_PELIS_SORTEDSET = "TOP10";
-        private const string USERS_RECOMMENDATIONS_HASH = "USERS_RECOMMENDATIONS";
-
-        private readonly RedisManagerPool Manager = new RedisManagerPool(REDIS_SERVER_CONNECTION);
+        private readonly RecommendationService recommendationService;
 
         public MovieFlixController(IConfiguration config)
         {
@@ -53,23 +47,14 @@ namespace MovieFlix.Controllers
 
         [HttpGet("GetTopMovies")]
         public string GetTopMovies()
-        {            
-            using (var client = Manager.GetClient())
-            {
-                var listado = client.GetRangeWithScoresFromSortedSetDesc(TOP_PELIS_SORTEDSET, 0, 9);
-                var primer_listado = String.Join('\n', listado);
-
-                return primer_listado;
-            }
+        {
+            return recommendationService.GetTopPelis();
         }
 
         [HttpGet("GetUserRecommendedMovies/{userId}")]
         public string GetUserRecommendedMovies(string userId)
         {
-            using (var client = Manager.GetClient())
-            {
-                return client.GetValueFromHash(USERS_RECOMMENDATIONS_HASH, userId);
-            }
+            return recommendationService.GetUserRecommendedMovies(userId);
         }
 
         [HttpPost("WatchMovie")]
