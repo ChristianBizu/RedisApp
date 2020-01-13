@@ -85,13 +85,22 @@ namespace MovieFlix.Application.Services
 
                 foreach (var genreRecommendationsCount in customUserRecommendationsCountByGenre)
                 {
-                    //La dejo para depurar por si queremos ver que vienen ordenadas de mayor a menor
-                    //var genreRecommendations = client.GetRangeWithScoresFromSortedSetDesc(genreRecommendationsCount.Key, 0, genreRecommendationsCount.Value);
-                    var genreRecommendations = client.GetRangeFromSortedSetDesc(genreRecommendationsCount.Key, 0, genreRecommendationsCount.Value);
-                    
-                    //Si al final lo queremos hacer, aqui habría que limpiar las pelis que ya haya visto el usuario
-                    
-                    
+                    var genreRecommendations = client.GetAllItemsFromSortedSetDesc(genreRecommendationsCount.Key);
+
+                    var userMovieVisualizations = GetUserMovieVisualizations(userId);
+                    var count = 0;
+                    foreach (var movie in genreRecommendations)
+                    {
+                        if (!userMovieVisualizations.Contains(movie))
+                        {
+                            customUserRecommendations.Add(movie);
+                            count++;
+                        }
+
+                        if (count == genreRecommendationsCount.Value)
+                            break;
+                    }
+
                     customUserRecommendations.AddRange(genreRecommendations);
                 }
 
@@ -106,11 +115,10 @@ namespace MovieFlix.Application.Services
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectQuery = "SELECT movies.genreMovie, count(movies.genreMovie) genreCount FROM [MovieFlix].[dbo].[visualizations] visualizations join [MovieFlix].[dbo].[movies] movies ON visualizations.idMovie = movies.idMovie WHERE  visualizations.idUser = @UserID group by(movies.genreMovie) order by genreCount desc";
+                string selectQuery = "SELECT movies.genreMovie, count(movies.genreMovie) genreCount FROM [MovieFlix].[dbo].[visualizations] visualizations join [MovieFlix].[dbo].[movies] movies ON visualizations.idMovie = movies.idMovie WHERE visualizations.idUser = @UserID group by(movies.genreMovie) order by genreCount desc";
 
                 using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
                 {
-
                     sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
 
                     sqlCmd.CommandType = CommandType.Text;
@@ -130,6 +138,38 @@ namespace MovieFlix.Application.Services
             }
 
             return userMovieVisualizationsGroupedByGenre;
+        }
+
+        private HashSet<string> GetUserMovieVisualizations(string userId)
+        {
+            string connectionString = configuration.GetConnectionString("DefaultConnection");
+            DataTable userMovieVisualizationsTable = new DataTable();
+
+            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            {
+                string selectQuery = "SELECT DISTINCT(visualizations.idMovie) FROM [MovieFlix].[dbo].[visualizations] visualizations WHERE visualizations.idUser = @UserID";
+
+                using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
+                {
+                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
+
+                    sqlCmd.CommandType = CommandType.Text;
+                    sqlConn.Open();
+
+                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
+                    {
+                        sqlAdapter.Fill(userMovieVisualizationsTable);
+                    }
+                }
+            }
+
+            HashSet<string> userMovieVisualizations = new HashSet<string>();
+            foreach (DataRow row in userMovieVisualizationsTable.Rows)
+            {
+                userMovieVisualizations.Add(row["idMovie"].ToString());
+            }
+
+            return userMovieVisualizations;
         }
 
         private Dictionary<string, int> CalculateCustomUserRecommendations(Dictionary<string, int> userMovieVisualizationsGroupedByGenre)
