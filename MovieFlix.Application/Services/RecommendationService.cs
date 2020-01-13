@@ -48,7 +48,6 @@ namespace MovieFlix.Application.Services
             }
 
             SaveViewsDb(movieVisualization);
-
             UpdateCustomUserRecommendations(movieVisualization.UserId);
         }
 
@@ -81,6 +80,8 @@ namespace MovieFlix.Application.Services
         {
             //1. Recuperar el total de visualizaciones del usuario agrupadas por genero de BD
             Dictionary<string, int> userMovieVisualizationsGroupedByGenre = new Dictionary<string, int>() { { "Action", 247 }, { "Love", 60 }, { "Comedy", 10 }, };
+
+
 
             var customUserRecommendationsCountByGenre = CalculateCustomUserRecommendations(userMovieVisualizationsGroupedByGenre);
 
