@@ -47,17 +47,17 @@ namespace MovieFlix.Application.Services
                 client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
             }
 
-            SaveViewsDb(movieVisualization);
+            InsertVisualization(movieVisualization);
             UpdateCustomUserRecommendations(movieVisualization.UserId);
         }
 
-        private void SaveViewsDb(MovieVisualization movieVisualization)
+        private void InsertVisualization(MovieVisualization movieVisualization)
         {
             string connectionString = configuration.GetConnectionString("DefaultConnection");
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string insertQuery = "INSERT INTO [MovieFlix].[dbo].[views] values ( @UserID , @MovieID , @Date )";
+                string insertQuery = "INSERT INTO [MovieFlix].[dbo].[visualizations] values ( @UserID , @MovieID , @Date )";
 
                 using (SqlCommand sqlCmd = new SqlCommand(insertQuery, sqlConn))
                 {
@@ -69,21 +69,14 @@ namespace MovieFlix.Application.Services
                     sqlCmd.CommandType = CommandType.Text;
                     sqlConn.Open();
 
-                    var response = sqlCmd.ExecuteNonQuery();
-
-                    if (response > 0)
-                        return;
+                    sqlCmd.ExecuteNonQuery();
                 }
             }
         }
 
         private void UpdateCustomUserRecommendations(string userId)
         {
-            //1. Recuperar el total de visualizaciones del usuario agrupadas por genero de BD
-            Dictionary<string, int> userMovieVisualizationsGroupedByGenre = new Dictionary<string, int>() { { "Action", 247 }, { "Love", 60 }, { "Comedy", 10 }, };
-
-
-
+            Dictionary<string, int> userMovieVisualizationsGroupedByGenre = GetUserMovieVisualizationsGroupedByGenre(userId);
             var customUserRecommendationsCountByGenre = CalculateCustomUserRecommendations(userMovieVisualizationsGroupedByGenre);
 
             using (var client = manager.GetClient())
@@ -104,6 +97,39 @@ namespace MovieFlix.Application.Services
 
                 client.SetEntryInHash(configuration.GetSection("UsersRecommendationsHash").Value, userId, String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations));
             }
+        }
+
+        private Dictionary<string, int> GetUserMovieVisualizationsGroupedByGenre(string userId)
+        {
+            string connectionString = configuration.GetConnectionString("DefaultConnection");
+            DataTable userMovieVisualizationsGroupedByGenreTable = new DataTable();
+
+            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            {
+                string selectQuery = "SELECT movies.genreMovie, count(movies.genreMovie) genreCount FROM [MovieFlix].[dbo].[visualizations] visualizations join [MovieFlix].[dbo].[movies] movies ON visualizations.idMovie = movies.idMovie WHERE  visualizations.idUser = @UserID group by(movies.genreMovie) order by genreCount desc";
+
+                using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
+                {
+
+                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
+
+                    sqlCmd.CommandType = CommandType.Text;
+                    sqlConn.Open();
+
+                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
+                    {
+                        sqlAdapter.Fill(userMovieVisualizationsGroupedByGenreTable);
+                    }
+                }
+            }
+
+            Dictionary<string, int> userMovieVisualizationsGroupedByGenre = new Dictionary<string, int>();
+            foreach (DataRow row in userMovieVisualizationsGroupedByGenreTable.Rows)
+            {
+                userMovieVisualizationsGroupedByGenre.Add(row["genreMovie"].ToString(), int.Parse(row["genreCount"].ToString()));
+            }
+
+            return userMovieVisualizationsGroupedByGenre;
         }
 
         private Dictionary<string, int> CalculateCustomUserRecommendations(Dictionary<string, int> userMovieVisualizationsGroupedByGenre)
