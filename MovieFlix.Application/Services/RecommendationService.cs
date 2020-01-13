@@ -61,9 +61,10 @@ namespace MovieFlix.Application.Services
 
                 using (SqlCommand sqlCmd = new SqlCommand(insertQuery, sqlConn))
                 {
-                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24);
-                    sqlCmd.Parameters.Add("@MovieID", SqlDbType.Int);
-                    sqlCmd.Parameters.Add("@Date", SqlDbType.DateTime);
+
+                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = movieVisualization.UserId;
+                    sqlCmd.Parameters.Add("@MovieID", SqlDbType.Int).Value = movieVisualization.MovieId;
+                    sqlCmd.Parameters.Add("@Date", SqlDbType.DateTime).Value = DateTime.Now;
 
                     sqlCmd.CommandType = CommandType.Text;
                     sqlConn.Open();
