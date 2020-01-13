@@ -61,7 +61,7 @@
     <Folder Include="dbo\Tables" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="dbo\Tables\views.sql" />
+    <Build Include="dbo\Tables\visualization.sql" />
     <Build Include="dbo\Tables\users.sql" />
     <Build Include="dbo\Tables\movies.sql" />
     <Build Include="dbo\Tables\genre.sql" />

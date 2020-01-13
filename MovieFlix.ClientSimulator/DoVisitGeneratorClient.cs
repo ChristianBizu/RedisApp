@@ -8,18 +8,18 @@ using System.Text.Json;
 
 namespace UserActionsSimulator
 {
-    class UserVisitsGenerator
+    internal class UserVisitsGenerator
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            Console.WriteLine("Generando película vista");
+            Console.WriteLine("Generando visitas a peliculas");
 
             var client = new HttpClient();
 
             MovieVisualization visitModel = GetRandomPost();
 
             client.PostAsync("https://localhost:44317/movieflix/WatchMovie", new StringContent(JsonSerializer.Serialize(visitModel), Encoding.UTF8, "application/json"));
-
+           
             Console.ReadLine();
         }
 
@@ -32,7 +32,7 @@ namespace UserActionsSimulator
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectMovieQuery = "SELECT TOP 1 * FROM[MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM[MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";  
+                string selectMovieQuery = "SELECT TOP 1 * FROM[MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM[MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
 
                 using (SqlCommand sqlCmd = new SqlCommand(selectMovieQuery, sqlConn))
                 {
@@ -43,7 +43,7 @@ namespace UserActionsSimulator
                     {
                         sqlAdapter.Fill(movieTable);
                     }
-                }            
+                }
             }
 
             foreach (DataRow row in movieTable.Rows)
@@ -54,7 +54,9 @@ namespace UserActionsSimulator
                 movieVisualization.UserId = row["idUser"].ToString();
             }
 
+            Console.WriteLine($"User: {movieVisualization.UserId} ha visto la película {movieVisualization.MovieId}: {movieVisualization.MovieName}");
+
             return movieVisualization;
-        }        
+        }
     }
 }
