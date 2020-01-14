@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace UserActionsSimulator
 {
@@ -16,11 +17,18 @@ namespace UserActionsSimulator
 
             var client = new HttpClient();
 
-            MovieVisualization visitModel = GetRandomPost();
+            for (var i = 0; i < 1; i++)
+            {
+                MovieVisualization movieVisualization = GetRandomPost();
 
-            client.PostAsync("https://localhost:44317/movieflix/WatchMovie", new StringContent(JsonSerializer.Serialize(visitModel), Encoding.UTF8, "application/json"));
-           
-            Console.ReadLine();
+                //movieVisualization.GenreName = "Action";
+                //movieVisualization.MovieId = 95;
+                //movieVisualization.MovieName = "Broken Arrow (1996)";
+                //movieVisualization.UserId = "bizu@correo.com";
+
+                client.PostAsync("https://localhost:44317/movieflix/WatchMovie", new StringContent(JsonSerializer.Serialize(movieVisualization), Encoding.UTF8, "application/json"));
+                Thread.Sleep(1000);
+            }
         }
 
         private static MovieVisualization GetRandomPost()
@@ -28,7 +36,7 @@ namespace UserActionsSimulator
             DataTable movieTable = new DataTable();
             MovieVisualization movieVisualization = new MovieVisualization();
 
-            string connectionString = "Server=DESKTOP-3O1UP4M\\SQLEXPRESS;Database=MovieFlix;Trusted_Connection=True;MultipleActiveResultSets=true";
+            string connectionString = "Server=DESKTOP-NL46CV2;Database=MovieFlix;Trusted_Connection=True;MultipleActiveResultSets=true";
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {

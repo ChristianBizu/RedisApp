@@ -51,6 +51,42 @@ namespace MovieFlix.Application.Services
             UpdateCustomUserRecommendations(movieVisualization.UserId);
         }
 
+        public MovieVisualization GetRandomMovieVisualization()
+        {
+            DataTable movieTable = new DataTable();
+            MovieVisualization movieVisualization = new MovieVisualization();
+
+            string connectionString = configuration.GetConnectionString("DefaultConnection");
+
+            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            {
+                string selectMovieQuery = "SELECT TOP 1 * FROM[MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM[MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
+
+                using (SqlCommand sqlCmd = new SqlCommand(selectMovieQuery, sqlConn))
+                {
+                    sqlCmd.CommandType = CommandType.Text;
+                    sqlConn.Open();
+
+                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
+                    {
+                        sqlAdapter.Fill(movieTable);
+                    }
+                }
+            }
+
+            foreach (DataRow row in movieTable.Rows)
+            {
+                movieVisualization.MovieId = int.Parse(row["idMovie"].ToString());
+                movieVisualization.MovieName = row["nameMovie"].ToString();
+                movieVisualization.GenreName = row["genreMovie"].ToString();
+                movieVisualization.UserId = row["idUser"].ToString();
+            }
+
+            Console.WriteLine($"User: {movieVisualization.UserId} ha visto la película {movieVisualization.MovieId}: {movieVisualization.MovieName}");
+
+            return movieVisualization;
+        }
+
         private void InsertVisualization(MovieVisualization movieVisualization)
         {
             string connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -61,7 +97,6 @@ namespace MovieFlix.Application.Services
 
                 using (SqlCommand sqlCmd = new SqlCommand(insertQuery, sqlConn))
                 {
-
                     sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = movieVisualization.UserId;
                     sqlCmd.Parameters.Add("@MovieID", SqlDbType.Int).Value = movieVisualization.MovieId;
                     sqlCmd.Parameters.Add("@Date", SqlDbType.DateTime).Value = DateTime.Now;
@@ -100,8 +135,6 @@ namespace MovieFlix.Application.Services
                         if (count == genreRecommendationsCount.Value)
                             break;
                     }
-
-                    customUserRecommendations.AddRange(genreRecommendations);
                 }
 
                 client.SetEntryInHash(configuration.GetSection("UsersRecommendationsHash").Value, userId, String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations));
@@ -147,7 +180,7 @@ namespace MovieFlix.Application.Services
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectQuery = "SELECT DISTINCT(visualizations.idMovie) FROM [MovieFlix].[dbo].[visualizations] visualizations WHERE visualizations.idUser = @UserID";
+                string selectQuery = "SELECT DISTINCT(movies.nameMovie) FROM [MovieFlix].[dbo].[visualizations] visualizations join [MovieFlix].[dbo].[movies] movies ON visualizations.idMovie = movies.idMovie WHERE visualizations.idUser = @UserID";
 
                 using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
                 {
@@ -166,7 +199,7 @@ namespace MovieFlix.Application.Services
             HashSet<string> userMovieVisualizations = new HashSet<string>();
             foreach (DataRow row in userMovieVisualizationsTable.Rows)
             {
-                userMovieVisualizations.Add(row["idMovie"].ToString());
+                userMovieVisualizations.Add(row["nameMovie"].ToString());
             }
 
             return userMovieVisualizations;
@@ -201,11 +234,15 @@ namespace MovieFlix.Application.Services
                     genreScores.Remove(lastKey);
                 else
                     genreScores[lastKey] -= 1;
+
+                recommendationsCount--;
             }
             while (recommendationsCount < customUserRecommendationsLimit)
             {
                 var firstKey = genreScores.Keys.First();
                 genreScores[firstKey] += 1;
+
+                recommendationsCount++;
             }
 
             return genreScores;
