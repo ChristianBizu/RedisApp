@@ -37,7 +37,15 @@ namespace MovieFlix.Controllers
         [HttpPost("Simulate")]
         public void Simulate()
         {
-            for (var i = 0; i < 1000; i++)
+            //MovieVisualization movieVisualization = new MovieVisualization()
+            //{
+            //    UserId = "bizu@correo.com",
+            //    GenreName = "Action",
+            //    MovieId = 592,
+            //    MovieName = "Batman (1989)"
+            //};
+
+            for (var i = 0; i < 100000; i++)
             {
                 MovieVisualization movieVisualization = recommendationService.GetRandomMovieVisualization();
                 recommendationService.UpdateRecommendations(movieVisualization);

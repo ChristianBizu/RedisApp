@@ -5,46 +5,55 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text;
 
 namespace MovieFlix.Application.Services
 {
     public class RecommendationService
     {
         private readonly IConfiguration configuration;
-        private readonly RedisManagerPool manager;
 
         public RecommendationService(IConfiguration configuration)
         {
             this.configuration = configuration;
-            manager = new RedisManagerPool(this.configuration.GetSection("RedisServerConnection").Value);
         }
 
         public string GetTopPelis()
         {
-            using (var client = manager.GetClient())
+            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
             {
-                var listado = client.GetRangeWithScoresFromSortedSetDesc(this.configuration.GetSection("TopPelisSortedSet").Value, 0, 9);
+                var bytesArray = client.ZRevRange(this.configuration.GetSection("TopPelisSortedSet").Value, 0, 9);
+                List<string> listado = new List<string>();
+                foreach (var bytes in bytesArray)
+                {
+                    String str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+                    listado.Add(str);
+                }
+
                 return String.Join(configuration.GetSection("MovieSeparator").Value, listado);
             }
         }
 
         public string GetUserRecommendedMovies(string userId)
         {
-            using (var client = manager.GetClient())
+            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
             {
-                return client.GetValueFromHash(this.configuration.GetSection("UsersRecommendationsHash").Value, userId);
+                var userRecommendations = client.HGet(this.configuration.GetSection("UsersRecommendationsHash").Value, Encoding.UTF8.GetBytes(userId));
+                return Encoding.UTF8.GetString(userRecommendations, 0, userRecommendations.Length);
             }
         }
 
         public void UpdateRecommendations(MovieVisualization movieVisualization)
         {
-            using (var client = manager.GetClient())
+            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
             {
                 //Incremento en TOP Pelis
-                client.IncrementItemInSortedSet(configuration.GetSection("TopPelisSortedSet").Value, movieVisualization.MovieName, 1);
+                client.ZIncrBy(configuration.GetSection("TopPelisSortedSet").Value, 1, Encoding.UTF8.GetBytes(movieVisualization.MovieName));
+                //client.IncrementItemInSortedSet(configuration.GetSection("TopPelisSortedSet").Value, movieVisualization.MovieName, 1);
 
                 //Incremento en TOP Pelis por género
-                client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
+                client.ZIncrBy(movieVisualization.GenreName, 1, Encoding.UTF8.GetBytes(movieVisualization.MovieName));
+                //client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
             }
 
             InsertVisualization(movieVisualization);
@@ -113,13 +122,23 @@ namespace MovieFlix.Application.Services
             Dictionary<string, int> userMovieVisualizationsGroupedByGenre = GetUserMovieVisualizationsGroupedByGenre(userId);
             var customUserRecommendationsCountByGenre = CalculateCustomUserRecommendations(userMovieVisualizationsGroupedByGenre);
 
-            using (var client = manager.GetClient())
+            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
             {
                 var customUserRecommendations = new List<string>();
 
                 foreach (var genreRecommendationsCount in customUserRecommendationsCountByGenre)
                 {
-                    var genreRecommendations = client.GetAllItemsFromSortedSetDesc(genreRecommendationsCount.Key);
+                    var bytesArray = client.ZRevRange(genreRecommendationsCount.Key, 0, -1);
+                    //var genreRecommendations = client.GetAllItemsFromSortedSetDesc(genreRecommendationsCount.Key);
+
+
+                    List<string> genreRecommendations = new List<string>();
+                    foreach (var bytes in bytesArray)
+                    {
+                        String str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+                        genreRecommendations.Add(str);
+                    }
+
 
                     var userMovieVisualizations = GetUserMovieVisualizations(userId);
                     var count = 0;
@@ -136,7 +155,9 @@ namespace MovieFlix.Application.Services
                     }
                 }
 
-                client.SetEntryInHash(configuration.GetSection("UsersRecommendationsHash").Value, userId, String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations));
+
+                var result = client.HSet(configuration.GetSection("UsersRecommendationsHash").Value, Encoding.UTF8.GetBytes(userId), Encoding.UTF8.GetBytes(String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations)));
+                //client.SetEntryInHash(configuration.GetSection("UsersRecommendationsHash").Value, userId, String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations));
             }
         }
 
