@@ -1,5 +1,5 @@
-﻿CREATE TABLE [dbo].[users] (
-    [idUser] NVARCHAR (24) NOT NULL,
-    CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([idUser] ASC)
+﻿CREATE TABLE [dbo].[Users] (
+    [UserId] NVARCHAR (32) NOT NULL,
+    CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([UserId] ASC)
 );
 

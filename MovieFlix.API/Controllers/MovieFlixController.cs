@@ -2,7 +2,6 @@
 using MovieFlix.Application;
 using MovieFlix.Application.Services;
 using Microsoft.Extensions.Configuration;
-using System;
 
 namespace MovieFlix.Controllers
 {
@@ -38,12 +37,9 @@ namespace MovieFlix.Controllers
         [HttpPost("Simulate")]
         public void Simulate()
         {
-            Console.WriteLine("Generando visitas a peliculas");
-
             for (var i = 0; i < 1000; i++)
             {
                 MovieVisualization movieVisualization = recommendationService.GetRandomMovieVisualization();
-
                 recommendationService.UpdateRecommendations(movieVisualization);
             }
         }

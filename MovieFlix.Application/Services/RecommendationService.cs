@@ -60,7 +60,7 @@ namespace MovieFlix.Application.Services
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectMovieQuery = "SELECT TOP 1 * FROM[MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM[MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
+                string selectMovieQuery = "SELECT TOP 1 * FROM [MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM [MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
 
                 using (SqlCommand sqlCmd = new SqlCommand(selectMovieQuery, sqlConn))
                 {
@@ -76,10 +76,10 @@ namespace MovieFlix.Application.Services
 
             foreach (DataRow row in movieTable.Rows)
             {
-                movieVisualization.MovieId = int.Parse(row["idMovie"].ToString());
-                movieVisualization.MovieName = row["nameMovie"].ToString();
-                movieVisualization.GenreName = row["genreMovie"].ToString();
-                movieVisualization.UserId = row["idUser"].ToString();
+                movieVisualization.MovieId = int.Parse(row["MovieId"].ToString());
+                movieVisualization.MovieName = row["MovieName"].ToString();
+                movieVisualization.GenreName = row["GenreName"].ToString();
+                movieVisualization.UserId = row["UserId"].ToString();
             }
 
             Console.WriteLine($"User: {movieVisualization.UserId} ha visto la película {movieVisualization.MovieId}: {movieVisualization.MovieName}");
@@ -103,7 +103,6 @@ namespace MovieFlix.Application.Services
 
                     sqlCmd.CommandType = CommandType.Text;
                     sqlConn.Open();
-
                     sqlCmd.ExecuteNonQuery();
                 }
             }
@@ -148,7 +147,7 @@ namespace MovieFlix.Application.Services
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectQuery = "SELECT movies.genreMovie, count(movies.genreMovie) genreCount FROM [MovieFlix].[dbo].[visualizations] visualizations join [MovieFlix].[dbo].[movies] movies ON visualizations.idMovie = movies.idMovie WHERE visualizations.idUser = @UserID group by(movies.genreMovie) order by genreCount desc";
+                string selectQuery = "SELECT M.[GenreName], COUNT(*) AS [GenreCount] FROM [MovieFlix].[dbo].[visualizations] AS V LEFT JOIN [MovieFlix].[dbo].[movies] AS M ON V.[MovieId] = M.[MovieId] WHERE V.[UserId] = @UserID GROUP BY M.[GenreName] ORDER BY 2 DESC";                
 
                 using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
                 {
@@ -156,7 +155,6 @@ namespace MovieFlix.Application.Services
 
                     sqlCmd.CommandType = CommandType.Text;
                     sqlConn.Open();
-
                     using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                     {
                         sqlAdapter.Fill(userMovieVisualizationsGroupedByGenreTable);
@@ -167,7 +165,7 @@ namespace MovieFlix.Application.Services
             Dictionary<string, int> userMovieVisualizationsGroupedByGenre = new Dictionary<string, int>();
             foreach (DataRow row in userMovieVisualizationsGroupedByGenreTable.Rows)
             {
-                userMovieVisualizationsGroupedByGenre.Add(row["genreMovie"].ToString(), int.Parse(row["genreCount"].ToString()));
+                userMovieVisualizationsGroupedByGenre.Add(row["GenreName"].ToString(), int.Parse(row["GenreCount"].ToString()));
             }
 
             return userMovieVisualizationsGroupedByGenre;
@@ -180,7 +178,7 @@ namespace MovieFlix.Application.Services
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectQuery = "SELECT DISTINCT(movies.nameMovie) FROM [MovieFlix].[dbo].[visualizations] visualizations join [MovieFlix].[dbo].[movies] movies ON visualizations.idMovie = movies.idMovie WHERE visualizations.idUser = @UserID";
+                string selectQuery = "SELECT DISTINCT(M.[MovieName]) FROM [MovieFlix].[dbo].[visualizations] AS V LEFT JOIN [MovieFlix].[dbo].[movies] AS M ON V.[MovieId] = M.[MovieId] WHERE V.[UserId] = @UserID";
 
                 using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
                 {
@@ -188,7 +186,6 @@ namespace MovieFlix.Application.Services
 
                     sqlCmd.CommandType = CommandType.Text;
                     sqlConn.Open();
-
                     using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                     {
                         sqlAdapter.Fill(userMovieVisualizationsTable);
@@ -199,7 +196,7 @@ namespace MovieFlix.Application.Services
             HashSet<string> userMovieVisualizations = new HashSet<string>();
             foreach (DataRow row in userMovieVisualizationsTable.Rows)
             {
-                userMovieVisualizations.Add(row["nameMovie"].ToString());
+                userMovieVisualizations.Add(row["MovieName"].ToString());
             }
 
             return userMovieVisualizations;

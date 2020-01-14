@@ -1,9 +1,0 @@
-﻿
-CREATE PROCEDURE [dbo].[TEST_LISTA_PELICULAS]
-AS
-BEGIN
-
-	SELECT TOP 100 * 
-	FROM [dbo].[movies]
-
-END

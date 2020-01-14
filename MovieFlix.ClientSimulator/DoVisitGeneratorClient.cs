@@ -16,19 +16,14 @@ namespace UserActionsSimulator
             Console.WriteLine("Generando visitas a peliculas");
 
             var client = new HttpClient();
-
             for (var i = 0; i < 1; i++)
             {
                 MovieVisualization movieVisualization = GetRandomPost();
-
-                //movieVisualization.GenreName = "Action";
-                //movieVisualization.MovieId = 95;
-                //movieVisualization.MovieName = "Broken Arrow (1996)";
-                //movieVisualization.UserId = "bizu@correo.com";
-
                 client.PostAsync("https://localhost:44317/movieflix/WatchMovie", new StringContent(JsonSerializer.Serialize(movieVisualization), Encoding.UTF8, "application/json"));
-                Thread.Sleep(1000);
+                Thread.Sleep(100);
             }
+
+            Console.WriteLine("Termina de generar visitas a peliculas");
         }
 
         private static MovieVisualization GetRandomPost()
@@ -36,17 +31,15 @@ namespace UserActionsSimulator
             DataTable movieTable = new DataTable();
             MovieVisualization movieVisualization = new MovieVisualization();
 
-            string connectionString = "Server=DESKTOP-NL46CV2;Database=MovieFlix;Trusted_Connection=True;MultipleActiveResultSets=true";
+            string connectionString = "Server=localhost;Database=MovieFlix;Trusted_Connection=True;MultipleActiveResultSets=true";
 
             using (SqlConnection sqlConn = new SqlConnection(connectionString))
             {
-                string selectMovieQuery = "SELECT TOP 1 * FROM[MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM[MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
-
+                string selectMovieQuery = "SELECT TOP 1 * FROM [MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM [MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
                 using (SqlCommand sqlCmd = new SqlCommand(selectMovieQuery, sqlConn))
                 {
                     sqlCmd.CommandType = CommandType.Text;
                     sqlConn.Open();
-
                     using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                     {
                         sqlAdapter.Fill(movieTable);
@@ -56,10 +49,10 @@ namespace UserActionsSimulator
 
             foreach (DataRow row in movieTable.Rows)
             {
-                movieVisualization.MovieId = int.Parse(row["idMovie"].ToString());
-                movieVisualization.MovieName = row["nameMovie"].ToString();
-                movieVisualization.GenreName = row["genreMovie"].ToString();
-                movieVisualization.UserId = row["idUser"].ToString();
+                movieVisualization.MovieId = int.Parse(row["MovieId"].ToString());
+                movieVisualization.MovieName = row["MovieName"].ToString();
+                movieVisualization.GenreName = row["GenreName"].ToString();
+                movieVisualization.UserId = row["UserId"].ToString();
             }
 
             Console.WriteLine($"User: {movieVisualization.UserId} ha visto la película {movieVisualization.MovieId}: {movieVisualization.MovieName}");

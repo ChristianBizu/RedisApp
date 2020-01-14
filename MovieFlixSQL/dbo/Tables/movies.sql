@@ -1,7 +1,7 @@
-﻿CREATE TABLE [dbo].[movies] (
-    [idMovie]    INT            NOT NULL,
-    [nameMovie]  NVARCHAR (255) NOT NULL,
-    [genreMovie] NVARCHAR (255) NOT NULL,
-    CONSTRAINT [PK_movies] PRIMARY KEY CLUSTERED ([idMovie] ASC)
+﻿CREATE TABLE [dbo].[Movies] (
+    [MovieId]   INT            NOT NULL,
+    [MovieName] NVARCHAR (255) NOT NULL,
+    [GenreName]   NVARCHAR (32)  NOT NULL,
+    CONSTRAINT [PK_Movies] PRIMARY KEY CLUSTERED ([MovieId] ASC)
 );
 
