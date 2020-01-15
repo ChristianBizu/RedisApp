@@ -12,49 +12,45 @@ namespace MovieFlix.Application.Services
     public class RecommendationService
     {
         private readonly IConfiguration configuration;
+        private readonly RedisNativeClient client;
+        private readonly SqlConnection sqlConn;
 
         public RecommendationService(IConfiguration configuration)
         {
             this.configuration = configuration;
+            this.client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value);
+            this.sqlConn = new SqlConnection(configuration.GetConnectionString("DefaultConnection"));
+            this.sqlConn.Open();
         }
 
         public string GetTopPelis()
         {
-            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
+            var bytesArray = client.ZRevRange(this.configuration.GetSection("TopPelisSortedSet").Value, 0, 9);
+            List<string> listado = new List<string>();
+            foreach (var bytes in bytesArray)
             {
-                var bytesArray = client.ZRevRange(this.configuration.GetSection("TopPelisSortedSet").Value, 0, 9);
-                List<string> listado = new List<string>();
-                foreach (var bytes in bytesArray)
-                {
-                    String str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
-                    listado.Add(str);
-                }
-
-                return String.Join(configuration.GetSection("MovieSeparator").Value, listado);
+                String str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+                listado.Add(str);
             }
+
+            return String.Join(configuration.GetSection("MovieSeparator").Value, listado);
         }
 
         public string GetUserRecommendedMovies(string userId)
         {
-            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
-            {
-                var userRecommendations = client.HGet(this.configuration.GetSection("UsersRecommendationsHash").Value, Encoding.UTF8.GetBytes(userId));
-                return Encoding.UTF8.GetString(userRecommendations, 0, userRecommendations.Length);
-            }
+            var userRecommendations = client.HGet(this.configuration.GetSection("UsersRecommendationsHash").Value, Encoding.UTF8.GetBytes(userId));
+            return Encoding.UTF8.GetString(userRecommendations, 0, userRecommendations.Length);
         }
 
         public void UpdateRecommendations(MovieVisualization movieVisualization)
         {
-            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
-            {
-                //Incremento en TOP Pelis
-                client.ZIncrBy(configuration.GetSection("TopPelisSortedSet").Value, 1, Encoding.UTF8.GetBytes(movieVisualization.MovieName));
-                //client.IncrementItemInSortedSet(configuration.GetSection("TopPelisSortedSet").Value, movieVisualization.MovieName, 1);
+            //Incremento en TOP Pelis
+            client.ZIncrBy(configuration.GetSection("TopPelisSortedSet").Value, 1, Encoding.UTF8.GetBytes(movieVisualization.MovieName));
+            //client.IncrementItemInSortedSet(configuration.GetSection("TopPelisSortedSet").Value, movieVisualization.MovieName, 1);
 
-                //Incremento en TOP Pelis por género
-                client.ZIncrBy(movieVisualization.GenreName, 1, Encoding.UTF8.GetBytes(movieVisualization.MovieName));
-                //client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
-            }
+            //Incremento en TOP Pelis por género
+            client.ZIncrBy(movieVisualization.GenreName, 1, Encoding.UTF8.GetBytes(movieVisualization.MovieName));
+            //client.IncrementItemInSortedSet(movieVisualization.GenreName, movieVisualization.MovieName, 1);
 
             InsertVisualization(movieVisualization);
             UpdateCustomUserRecommendations(movieVisualization.UserId);
@@ -65,21 +61,15 @@ namespace MovieFlix.Application.Services
             DataTable movieTable = new DataTable();
             MovieVisualization movieVisualization = new MovieVisualization();
 
-            string connectionString = configuration.GetConnectionString("DefaultConnection");
+            string selectMovieQuery = "SELECT TOP 1 * FROM [MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM [MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
 
-            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            using (SqlCommand sqlCmd = new SqlCommand(selectMovieQuery, sqlConn))
             {
-                string selectMovieQuery = "SELECT TOP 1 * FROM [MovieFlix].[dbo].[movies] AS A, (SELECT TOP 1 * FROM [MovieFlix].[dbo].[users] ORDER BY NEWID()) AS B ORDER BY NEWID()";
+                sqlCmd.CommandType = CommandType.Text;
 
-                using (SqlCommand sqlCmd = new SqlCommand(selectMovieQuery, sqlConn))
+                using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                 {
-                    sqlCmd.CommandType = CommandType.Text;
-                    sqlConn.Open();
-
-                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
-                    {
-                        sqlAdapter.Fill(movieTable);
-                    }
+                    sqlAdapter.Fill(movieTable);
                 }
             }
 
@@ -98,22 +88,17 @@ namespace MovieFlix.Application.Services
 
         private void InsertVisualization(MovieVisualization movieVisualization)
         {
-            string connectionString = configuration.GetConnectionString("DefaultConnection");
+            string insertQuery = "INSERT INTO [MovieFlix].[dbo].[visualizations] values ( @UserID , @MovieID , @Date )";
 
-            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            using (SqlCommand sqlCmd = new SqlCommand(insertQuery, sqlConn))
             {
-                string insertQuery = "INSERT INTO [MovieFlix].[dbo].[visualizations] values ( @UserID , @MovieID , @Date )";
+                sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = movieVisualization.UserId;
+                sqlCmd.Parameters.Add("@MovieID", SqlDbType.Int).Value = movieVisualization.MovieId;
+                sqlCmd.Parameters.Add("@Date", SqlDbType.DateTime).Value = DateTime.Now;
 
-                using (SqlCommand sqlCmd = new SqlCommand(insertQuery, sqlConn))
-                {
-                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = movieVisualization.UserId;
-                    sqlCmd.Parameters.Add("@MovieID", SqlDbType.Int).Value = movieVisualization.MovieId;
-                    sqlCmd.Parameters.Add("@Date", SqlDbType.DateTime).Value = DateTime.Now;
-
-                    sqlCmd.CommandType = CommandType.Text;
-                    sqlConn.Open();
-                    sqlCmd.ExecuteNonQuery();
-                }
+                sqlCmd.CommandType = CommandType.Text;
+                
+                sqlCmd.ExecuteNonQuery();
             }
         }
 
@@ -122,43 +107,37 @@ namespace MovieFlix.Application.Services
             Dictionary<string, int> userMovieVisualizationsGroupedByGenre = GetUserMovieVisualizationsGroupedByGenre(userId);
             var customUserRecommendationsCountByGenre = CalculateCustomUserRecommendations(userMovieVisualizationsGroupedByGenre);
 
-            using (var client = new RedisNativeClient(this.configuration.GetSection("RedisServerConnection").Value))
+            var customUserRecommendations = new List<string>();
+
+            foreach (var genreRecommendationsCount in customUserRecommendationsCountByGenre)
             {
-                var customUserRecommendations = new List<string>();
-
-                foreach (var genreRecommendationsCount in customUserRecommendationsCountByGenre)
+                var bytesArray = client.ZRevRange(genreRecommendationsCount.Key, 0, -1);
+                //var genreRecommendations = client.GetAllItemsFromSortedSetDesc(genreRecommendationsCount.Key);
+                
+                List<string> genreRecommendations = new List<string>();
+                foreach (var bytes in bytesArray)
                 {
-                    var bytesArray = client.ZRevRange(genreRecommendationsCount.Key, 0, -1);
-                    //var genreRecommendations = client.GetAllItemsFromSortedSetDesc(genreRecommendationsCount.Key);
-
-
-                    List<string> genreRecommendations = new List<string>();
-                    foreach (var bytes in bytesArray)
-                    {
-                        String str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
-                        genreRecommendations.Add(str);
-                    }
-
-
-                    var userMovieVisualizations = GetUserMovieVisualizations(userId);
-                    var count = 0;
-                    foreach (var movie in genreRecommendations)
-                    {
-                        if (!userMovieVisualizations.Contains(movie))
-                        {
-                            customUserRecommendations.Add(movie);
-                            count++;
-                        }
-
-                        if (count == genreRecommendationsCount.Value)
-                            break;
-                    }
+                    String str = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+                    genreRecommendations.Add(str);
                 }
 
+                var userMovieVisualizations = GetUserMovieVisualizations(userId);
+                var count = 0;
+                foreach (var movie in genreRecommendations)
+                {
+                    if (!userMovieVisualizations.Contains(movie))
+                    {
+                        customUserRecommendations.Add(movie);
+                        count++;
+                    }
 
-                var result = client.HSet(configuration.GetSection("UsersRecommendationsHash").Value, Encoding.UTF8.GetBytes(userId), Encoding.UTF8.GetBytes(String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations)));
-                //client.SetEntryInHash(configuration.GetSection("UsersRecommendationsHash").Value, userId, String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations));
+                    if (count == genreRecommendationsCount.Value)
+                        break;
+                }
             }
+
+            var result = client.HSet(configuration.GetSection("UsersRecommendationsHash").Value, Encoding.UTF8.GetBytes(userId), Encoding.UTF8.GetBytes(String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations)));
+            //client.SetEntryInHash(configuration.GetSection("UsersRecommendationsHash").Value, userId, String.Join(configuration.GetSection("MovieSeparator").Value, customUserRecommendations));
         }
 
         private Dictionary<string, int> GetUserMovieVisualizationsGroupedByGenre(string userId)
@@ -166,20 +145,16 @@ namespace MovieFlix.Application.Services
             string connectionString = configuration.GetConnectionString("DefaultConnection");
             DataTable userMovieVisualizationsGroupedByGenreTable = new DataTable();
 
-            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            string selectQuery = "SELECT M.[GenreName], COUNT(*) AS [GenreCount] FROM [MovieFlix].[dbo].[visualizations] AS V LEFT JOIN [MovieFlix].[dbo].[movies] AS M ON V.[MovieId] = M.[MovieId] WHERE V.[UserId] = @UserID GROUP BY M.[GenreName] ORDER BY 2 DESC";                
+
+            using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
             {
-                string selectQuery = "SELECT M.[GenreName], COUNT(*) AS [GenreCount] FROM [MovieFlix].[dbo].[visualizations] AS V LEFT JOIN [MovieFlix].[dbo].[movies] AS M ON V.[MovieId] = M.[MovieId] WHERE V.[UserId] = @UserID GROUP BY M.[GenreName] ORDER BY 2 DESC";                
+                sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
 
-                using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
+                sqlCmd.CommandType = CommandType.Text;
+                using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                 {
-                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
-
-                    sqlCmd.CommandType = CommandType.Text;
-                    sqlConn.Open();
-                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
-                    {
-                        sqlAdapter.Fill(userMovieVisualizationsGroupedByGenreTable);
-                    }
+                    sqlAdapter.Fill(userMovieVisualizationsGroupedByGenreTable);
                 }
             }
 
@@ -197,20 +172,16 @@ namespace MovieFlix.Application.Services
             string connectionString = configuration.GetConnectionString("DefaultConnection");
             DataTable userMovieVisualizationsTable = new DataTable();
 
-            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            string selectQuery = "SELECT DISTINCT(M.[MovieName]) FROM [MovieFlix].[dbo].[visualizations] AS V LEFT JOIN [MovieFlix].[dbo].[movies] AS M ON V.[MovieId] = M.[MovieId] WHERE V.[UserId] = @UserID";
+
+            using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
             {
-                string selectQuery = "SELECT DISTINCT(M.[MovieName]) FROM [MovieFlix].[dbo].[visualizations] AS V LEFT JOIN [MovieFlix].[dbo].[movies] AS M ON V.[MovieId] = M.[MovieId] WHERE V.[UserId] = @UserID";
+                sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
 
-                using (SqlCommand sqlCmd = new SqlCommand(selectQuery, sqlConn))
+                sqlCmd.CommandType = CommandType.Text;
+                using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
                 {
-                    sqlCmd.Parameters.Add("@UserID", SqlDbType.NVarChar, 24).Value = userId;
-
-                    sqlCmd.CommandType = CommandType.Text;
-                    sqlConn.Open();
-                    using (SqlDataAdapter sqlAdapter = new SqlDataAdapter(sqlCmd))
-                    {
-                        sqlAdapter.Fill(userMovieVisualizationsTable);
-                    }
+                    sqlAdapter.Fill(userMovieVisualizationsTable);
                 }
             }
 
